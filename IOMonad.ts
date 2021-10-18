@@ -1,5 +1,5 @@
 import reader from "readline-sync";
-import { u, U, Thunk } from "./unit";
+import { u, U } from "./unit";
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
@@ -12,6 +12,7 @@ import { u, U, Thunk } from "./unit";
 // There are workarounds, based on coroutines, which can allocate memory more efficiently.
 // It's not clear these will code that cleanly in typescipt, but the basic monadic code is simpler
 // in typescript, bar it requires handling.
+export type Thunk<T> = () => T;
 
 export const makeIO = <T>(f: Thunk<T>) => new IO<T>(f);
 
