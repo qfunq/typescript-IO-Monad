@@ -1,5 +1,6 @@
 #!./node_modules/.bin/ts-node 
-import reader from 'readline-sync';
+
+import {U, getStr, putStr} from './IOMonad'
 
 export type Thunk<T> = ()=> T;
 
@@ -11,9 +12,6 @@ export type Possibly<T> = T | BadData
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
 
-export const u = {}
-
-export type U = typeof u
 
 
 // The next line is a problem, because it uses the heap. The compiler needs to do a lot more work
@@ -27,26 +25,6 @@ export type U = typeof u
 // in typescript, bar it requires async handling.
 
 
-export const makeIO = <T>(f: Thunk<T>) => new IO<T>(f)
-
-export class IO<T> {
-  private act: Thunk<T>
-
-  constructor (action: Thunk<T>) {this.act = action}
-
-  readonly run  = () => this.act() 
-
-  readonly bind = <M>(f: (maps: T) => IO<M>) => makeIO(() => f(this.act()).run())
-
-  readonly fmap = <R>(f: (maps: T) => R) => makeIO(() => f(this.act()))
-
-}
-
-
-
-
-export const putStr = (s: string) => makeIO(() => {console.log(s); return u;}) 
-export const getStr = (x: U) => makeIO(() => reader.question(''))
 
 
 
@@ -86,7 +64,7 @@ export const test2 =
   putStr("What is your name?")
     .bind(getStr)
     .fmap((s: string) => {console.log(s); return s.toUpperCase()})
-    .bind((name: string) => putStr("hi " + name));
+    .bind((name: string) => putStr("Hi " + name));
 
 test2.run()
 
