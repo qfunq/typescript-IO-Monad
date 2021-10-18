@@ -2,11 +2,11 @@
 
 import { U, getStr, putStr } from "./IOMonad";
 
-export type Thunk<T> = () => T;
-
 export type BadData = undefined | null;
 
 export type Possibly<T> = T | BadData;
+
+export type Thunk<T> = () => T;
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
