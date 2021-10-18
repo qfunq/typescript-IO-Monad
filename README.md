@@ -1,10 +1,10 @@
-## typescript-io-monad
+## Typescript-IO-Monad
 
 A minimal port of Bartosz Milewski's C++ monadic IO to typescript.
 
 https://www.youtube.com/watch?v=vkcxgagQ4bM
 
-Fully working in syncronous mode. Async monadic IO has complications arising from Promises.
+Fully working in synchronous mode. Async monadic IO has complications arising from Promises.
 
 The type system seems to work pretty well, many types can be deduced by the compiler.
 
