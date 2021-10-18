@@ -29,7 +29,6 @@ test.run();
 export const test2 = putStr("What is your name?")
   .bind(getStr)
   .fmap((s: string) => {
-    console.log(s);
     return s.toUpperCase();
   })
   .bind((name: string) => putStr("Hi " + name));
