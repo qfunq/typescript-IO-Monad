@@ -46,6 +46,8 @@ export class IO<T> {
 
 
 export const putStr = (s: string) => makeIO(() => {console.log(s); return u;}) 
+export const getStr = (x: U) => makeIO(() => reader.question(''))
+
 
 
 export const test = putStr("hello").bind((x: U) => putStr("world"))
@@ -78,14 +80,7 @@ async function readLine(): Promise<string> {
 
 }
 
-// ——— Call
 
-function getLine(x: U) {
-
-  return reader.question("")
-}
-
-export const getStr = (x: U) => makeIO(() => getLine(x))
 
 export const test2 = 
   putStr("What is your name?")
