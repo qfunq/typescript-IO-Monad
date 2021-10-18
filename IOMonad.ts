@@ -1,16 +1,9 @@
 import reader from "readline-sync";
+import { u, U } from "./unit";
 
 export type Thunk<T> = () => T;
 
-export type BadData = undefined | null;
-
-export type Possibly<T> = T | BadData;
-
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
-
-export const u = {};
-
-export type U = typeof u;
 
 // The next line is a problem, because it uses the heap. The compiler needs to do a lot more work
 // to build monadic code efficiently, largely eliminating this new, according to the context.

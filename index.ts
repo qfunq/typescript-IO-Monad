@@ -1,6 +1,6 @@
 #!./node_modules/.bin/ts-node
-
-import { U, getStr, putStr } from "./IOMonad";
+import { U } from "./unit";
+import { getStr, putStr } from "./IOMonad";
 
 export type BadData = undefined | null;
 
