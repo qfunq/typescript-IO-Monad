@@ -11,25 +11,29 @@ import { u, U, Thunk } from "./unit";
 // C++ has big issues with it, and typescript suffers too.
 // There are workarounds, based on coroutines, which can allocate memory more efficiently.
 // It's not clear these will code that cleanly in typescipt, but the basic monadic code is simpler
-// in typescript, bar it requires handling.
+// in typescript, bar it requires async handling.
 
-export const makeIO = <T>(f: Thunk<T>) => new IO<T>(f);
+export const makeIO = async <T>(f: Thunk<T>) => new IO<T>(f);
 
 export class IO<T> {
-  private act: () => T;
+  act: Thunk<Promise<T>>;
 
-  constructor(action: Thunk<T>) {
+  constructor(action: Thunk<Promise<T>>) {
     this.act = action;
   }
 
-  readonly run = () => this.act();
+  readonly run = async () => await this.act();
 
-  readonly bind = <M>(f: (maps: T) => IO<M>) =>
-    makeIO(() => f(this.act()).run());
+  readonly bind = async <M>(f: (maps: T) => IO<M>) =>
+    makeIO(async () => {
+      const result = await this.act();
+      return await f(result).run();
+    });
 
-  readonly fmap = <R>(f: (maps: T) => R) =>
-    makeIO(() => {
-      return f(this.act());
+  readonly fmap = async <R>(f: (maps: T) => Promise<R>) =>
+    makeIO(async () => {
+      const result = await this.act();
+      return await f(result);
     });
 }
 
