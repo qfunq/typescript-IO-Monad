@@ -1,3 +1,3 @@
-# typescript-dzzhph
+## typescript-IO-Monad
 
-[Edit on StackBlitz ⚡️](https://stackblitz.com/edit/typescript-dzzhph)
+[Edit on StackBlitz ⚡️](https://stackblitz.com/edit/typescript-io-monad)
