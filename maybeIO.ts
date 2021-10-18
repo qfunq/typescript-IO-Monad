@@ -20,28 +20,50 @@ export type MaybePromise<T> = T | Promise<T>;
 
 export type Thunk<T> = () => MaybePromise<T>;
 
-export const makeIO = async <T>(f: Thunk<T>) => new IO<T>(f);
+export const unitThunk = async () => u;
 
-export class IO<T> {
+export type TunitThunk = () => U;
+
+export const transferIO = async <A, F>(
+  a: Thunk<A>,
+  fail: Thunk<F>,
+  msg: string
+) => new IO_aux<A, F>(a, fail, msg);
+
+export const IO = <A>(a: Thunk<A>) => transferIO(a, unitThunk, "");
+
+export class IO_aux<T, F> {
   act: Thunk<T>;
+  onfail: Thunk<F>;
+  msg: string = "";
 
-  constructor(action: Thunk<T>) {
+  constructor(action: Thunk<T>, fail: Thunk<F>, msg: string) {
     this.act = action;
+    this.onfail = fail;
+    this.msg = msg;
   }
 
-  readonly run = async () => await this.act();
+  readonly run = async <T>() => await this.act();
 
-  readonly bind = async <M>(f: (maps: T) => IO<M>) =>
-    makeIO(async () => {
-      const result = await this.act();
-      return await f(result).run();
-    });
+  readonly bind = async <M>(f: (maps: T) => IO_aux<M, F>) =>
+    transferIO(
+      async () => {
+        const result = await this.act();
+        return await f(result).run();
+      },
+      this.onfail,
+      this.msg
+    );
 
   readonly fmap = async <R>(f: (maps: T) => MaybePromise<R>) =>
-    makeIO(async () => {
-      const result = await this.act();
-      return await f(result);
-    });
+    transferIO(
+      async () => {
+        const result = await this.act();
+        return await f(result);
+      },
+      this.onfail,
+      this.msg
+    );
 }
 
 export function delay(ms: number) {
@@ -49,7 +71,7 @@ export function delay(ms: number) {
 }
 
 export const putStr = (s: string) =>
-  makeIO(() => {
+  IO(() => {
     console.log(s);
     return u;
   });
@@ -72,4 +94,4 @@ async function readLine(): Promise<string> {
   return answer;
 }
 
-export const getStr = (x: U) => makeIO(() => readLine());
+export const getStr = (x: U) => IO(() => readLine());

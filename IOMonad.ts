@@ -39,4 +39,6 @@ export const putStr = (s: string) =>
     console.log(s);
     return u;
   });
-export const getStr = (x: U) => makeIO(() => reader.question(""));
+
+export const getLine = () => reader.question("");
+export const getStr = (x: U) => makeIO(() => getLine());
