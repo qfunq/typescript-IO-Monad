@@ -26,28 +26,6 @@ test.run();
 
 test.run();
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function readLine(): Promise<string> {
-  const readLine = require("readline").createInterface({
-    input: process.stdin,
-    //output: process.stdout
-  });
-
-  let answer = "";
-  readLine.question("", (it: string) => {
-    answer = it;
-    readLine.close();
-  });
-  while (answer == "") {
-    await delay(100);
-  }
-
-  return answer;
-}
-
 export const test2 = putStr("What is your name?")
   .bind(getStr)
   .fmap((s: string) => {

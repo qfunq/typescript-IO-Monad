@@ -1,5 +1,5 @@
 import reader from "readline-sync";
-import { u, U, Thunk } from "./unit";
+import { u, U } from "./unit";
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
@@ -13,12 +13,19 @@ import { u, U, Thunk } from "./unit";
 // It's not clear these will code that cleanly in typescipt, but the basic monadic code is simpler
 // in typescript, bar it requires async handling.
 
+//Do we need 2 apis, one for promises and one for synchronous functions?
+//
+
+export type MaybePromise<T> = T | Promise<T>;
+
+export type Thunk<T> = () => MaybePromise<T>;
+
 export const makeIO = async <T>(f: Thunk<T>) => new IO<T>(f);
 
 export class IO<T> {
-  act: Thunk<Promise<T>>;
+  act: Thunk<T>;
 
-  constructor(action: Thunk<Promise<T>>) {
+  constructor(action: Thunk<T>) {
     this.act = action;
   }
 
@@ -30,11 +37,15 @@ export class IO<T> {
       return await f(result).run();
     });
 
-  readonly fmap = async <R>(f: (maps: T) => Promise<R>) =>
+  readonly fmap = async <R>(f: (maps: T) => MaybePromise<R>) =>
     makeIO(async () => {
       const result = await this.act();
       return await f(result);
     });
+}
+
+export function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export const putStr = (s: string) =>
@@ -42,4 +53,23 @@ export const putStr = (s: string) =>
     console.log(s);
     return u;
   });
-export const getStr = (x: U) => makeIO(() => reader.question(""));
+
+async function readLine(): Promise<string> {
+  const readLine = require("readline").createInterface({
+    input: process.stdin,
+    //output: process.stdout
+  });
+
+  let answer = "";
+  readLine.question("", (it: string) => {
+    answer = it;
+    readLine.close();
+  });
+  while (answer == "") {
+    await delay(100);
+  }
+
+  return answer;
+}
+
+export const getStr = (x: U) => makeIO(() => readLine());
