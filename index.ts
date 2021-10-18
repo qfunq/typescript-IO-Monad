@@ -1,5 +1,5 @@
 #!./node_modules/.bin/ts-node 
-
+import reader from 'readline-sync';
 
 export type Thunk<T> = ()=> T;
 
@@ -36,10 +36,10 @@ export class IO<T> {
 
   readonly run  = () => this.act() 
 
-  readonly bind = <M>(f: (maps: T) => IO<M>) => makeIO<M>(() => f(this.act()).run())
+  readonly bind = <M>(f: (maps: T) => IO<M>) => makeIO(() => f(this.act()).run())
 
-  readonly fmap = <F>(f: (maps: T) => F) => makeIO<F>(()=> f(this.act()))
-  
+  readonly fmap = <R>(f: (maps: T) => R) => makeIO(() => f(this.act()))
+
 }
 
 
@@ -64,7 +64,7 @@ async function readLine(): Promise<string> {
 
   const readLine = require('readline').createInterface({
       input: process.stdin,
-      output: process.stdout
+      //output: process.stdout
   });
 
   let answer = ""
@@ -80,15 +80,23 @@ async function readLine(): Promise<string> {
 
 // ——— Call
 
-async function aMiscFunction() {
+function getLine(x: U) {
 
-  let answer = await readLine()
-  console.log(answer)
-
+  return reader.question("")
 }
 
-//aMiscFunction()
+export const getStr = (x: U) => makeIO(() => getLine(x))
+
+export const test2 = 
+  putStr("What is your name?")
+    .bind(getStr)
+    .fmap((s: string) => {console.log(s); return s.toUpperCase()})
+    .bind((name: string) => putStr("hi " + name));
+
+test2.run()
 
 
-delay (100000000)
+
+
+
 
