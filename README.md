@@ -19,11 +19,11 @@ Feel free to join the chat thread in issues.
 Because typescript interfaces with the outside world using non monadic apis, and all of these appear
 to be a major source of bugs, often due to the defensive/obscure nature of the code involved, which is as contagious as the source of the issues: `async/await/try/catch/undefined/null/?./!.`. If anyone else knows of other contagious and dangerous operations, please post them in issues.
 
+Promises are good at doing some of what the IO monad does, but they don't compose (they only implement fmap). However an external function could implement bind, but then we gain brackets, which defeats the purpose.
+
 ## Issues
 
 Although the code is extremely succinct (thanks Bartosz!), typescript is likely to have a hard time managing the heap, due to the explicit call of `new`.
-
-Promises are next. They only offer half a monadic api, which can be the source of generic bugs in production code. 
 
 ## License
 

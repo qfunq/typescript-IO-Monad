@@ -42,3 +42,22 @@ export const putStr = (s: string) =>
 
 export const getLine = () => reader.question("");
 export const getStr = (x: U) => makeIO(() => getLine());
+export const pure = <T>(x: T) => makeIO(() => x);
+
+export const ask = (i: number) => {
+  return putStr("Is it less than: ")
+    .bind((x: U) => putStr(i.toString()))
+    .bind((x: U) => putStr(" (y/n)?"))
+    .bind(getStr)
+    .bind((s: string) => pure(s === "y"));
+};
+
+export const guess = (a: number, b: number): IO<number> => {
+  if (a >= b) return pure(a);
+
+  const m = (b + 1 + a) / 2;
+
+  return ask(m).bind((yes: boolean) => {
+    return yes ? guess(a, m - 1) : guess(m, b);
+  });
+};

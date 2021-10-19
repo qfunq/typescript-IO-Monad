@@ -1,6 +1,7 @@
 #!./node_modules/.bin/ts-node
 import { U } from "./unit";
-import { getStr, putStr } from "./IOMonad";
+import { getStr, putStr, pure, guess } from "./IOMonad";
+import { MyPromise } from "./promise";
 
 export type BadData = undefined | null;
 
@@ -28,9 +29,17 @@ test.run();
 
 export const test2 = putStr("What is your name?")
   .bind(getStr)
-  .fmap((s: string) => {
-    return s.toUpperCase();
-  })
+  .fmap((s: string) => s.toUpperCase())
   .bind((name: string) => putStr("Hi " + name));
 
 test2.run();
+
+const low = 1;
+const high = 1024;
+
+putStr(
+  "Think of a number between " + low.toString() + " and " + high.toString()
+)
+  .bind((x: U) => guess(low, high))
+  .bind((ans: number) => putStr("The answer is: " + ans.toString()))
+  .run();

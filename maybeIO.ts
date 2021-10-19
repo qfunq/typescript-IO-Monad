@@ -1,6 +1,8 @@
 import reader from "readline-sync";
 import { u, U } from "./unit";
 
+import { log, xlog } from "./logging";
+
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
 // The next line is a problem, because it uses the heap. The compiler needs to do a lot more work
@@ -13,55 +15,87 @@ import { u, U } from "./unit";
 // It's not clear these will code that cleanly in typescipt, but the basic monadic code is simpler
 // in typescript, bar it requires async handling.
 
-//Do we need 2 apis, one for promises and one for synchronous functions?
-//
-
 export type MaybePromise<T> = T | Promise<T>;
 
 export type Thunk<T> = () => MaybePromise<T>;
 
 export const unitThunk = async () => u;
 
+enum MIOErrors {
+  none = "",
+  exception = "exception",
+  catch = "catch",
+  undefined = "undefined",
+  null = "null",
+  run = "run",
+  runCatch = "run catch",
+}
+
+export type TErrorHandler<F> = (lineErr: Error) => (mioerr: MIOErrors) => F;
+
+export const errorHandler =
+  <F>(fail: F) =>
+  (lineErr: Error) =>
+  (mioerr: MIOErrors) =>
+    fail;
+
+export const unitErrorHandler = errorHandler(u);
+
 export type TunitThunk = () => U;
 
 export const transferIO = async <A, F>(
   a: Thunk<A>,
-  fail: Thunk<F>,
-  msg: string
+  fail: TErrorHandler<F>,
+  msg: MIOErrors
 ) => new IO_aux<A, F>(a, fail, msg);
 
-export const IO = <A>(a: Thunk<A>) => transferIO(a, unitThunk, "");
+export const noMIOErrors = () => MIOErrors.none;
+
+export const IO = <A>(a: Thunk<A>) =>
+  transferIO(a, unitErrorHandler, noMIOErrors());
 
 export class IO_aux<T, F> {
   act: Thunk<T>;
-  onfail: Thunk<F>;
-  msg: string = "";
+  onFail: TErrorHandler<F>;
+  msg: MIOErrors;
 
-  constructor(action: Thunk<T>, fail: Thunk<F>, msg: string) {
+  readonly isGood = () => this.msg === noMIOErrors();
+
+  constructor(action: Thunk<T>, fail: TErrorHandler<F>, msg: MIOErrors) {
     this.act = action;
-    this.onfail = fail;
+    this.onFail = fail;
     this.msg = msg;
   }
 
-  readonly run = async <T>() => await this.act();
+  readonly run = async () => {
+    if (this.isGood())
+      try {
+        return await this.act();
+      } catch {
+        return this.onFail(new Error())(MIOErrors.run);
+      }
+    else {
+      return this.onFail(new Error())(MIOErrors.runCatch);
+    }
+  };
 
-  readonly bind = async <M>(f: (maps: T) => IO_aux<M, F>) =>
+  readonly bind = async <M>(f: (maps: T) => IO_aux<M, F>) => {
     transferIO(
       async () => {
         const result = await this.act();
         return await f(result).run();
       },
-      this.onfail,
+      this.onFail,
       this.msg
     );
-
+  };
   readonly fmap = async <R>(f: (maps: T) => MaybePromise<R>) =>
     transferIO(
       async () => {
         const result = await this.act();
         return await f(result);
       },
-      this.onfail,
+      this.onFail,
       this.msg
     );
 }
