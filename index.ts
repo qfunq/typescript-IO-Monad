@@ -1,13 +1,11 @@
 #!./node_modules/.bin/ts-node
-import { U } from "./unit";
+import { u, U } from "./unit";
 import { getStr, putStr, pure, guess } from "./IOMonad";
 import { MyPromise } from "./promise";
 
 export type BadData = undefined | null;
 
 export type Possibly<T> = T | BadData;
-
-export type Thunk<T> = () => T;
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
@@ -18,28 +16,35 @@ export type Thunk<T> = () => T;
 // lecture, its a howto and a warning: take this code seriously, it presents problems for compilers.
 // C++ has big issues with it, and typescript suffers too.
 // There are workarounds, based on coroutines, which can allocate memory more efficiently.
-// It's not clear these will code that cleanly in typescipt, but the basic monadic code is simpler
-// in typescript, bar it requires async handling.
 
-export const test = putStr("hello").bind((x: U) => putStr("world"));
+export const test = putStr("hello").bind((x: U) => putStr(" world!\n"));
 
 test.run();
 
 test.run();
 
-export const test2 = putStr("What is your name?")
+export const cr = "\n";
+
+export const test2 = putStr("What is your name? ")
   .bind(getStr)
   .fmap((s: string) => s.toUpperCase())
-  .bind((name: string) => putStr("Hi " + name));
+  .bind((name: string) => putStr(cr + "Hi " + name + cr));
 
 test2.run();
 
 const low = 1;
 const high = 1024;
 
+// Works out the box in typescript! That's an improvement over C++ that has problems
+// when the thunk is strongly typed, requiring the std::function hack described by Bartosz.
+
 putStr(
-  "Think of a number between " + low.toString() + " and " + high.toString()
+  "Think of a number between " + low.toString() + " and " + high.toString() + cr
 )
   .bind((x: U) => guess(low, high))
-  .bind((ans: number) => putStr("The answer is: " + ans.toString()))
+  .bind((ans: number) => putStr(cr + "The answer is: " + ans.toString() + cr))
   .run();
+
+export function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

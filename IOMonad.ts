@@ -34,11 +34,25 @@ export class IO<T> {
     });
 }
 
-export const putStr = (s: string) =>
-  makeIO(() => {
-    console.log(s);
-    return u;
+function putStrRaw(msg: string) {
+  const cout = require("readline").createInterface({
+    output: process.stdout,
   });
+
+  cout.question("", (it: string) => {
+    msg;
+  });
+  cout.close();
+  return u;
+}
+
+export const writeStdOut = (s: string) =>
+  new Promise((resolved) => process.stdout.write(s, resolved));
+
+//This is a good model, its a raw socket write,
+//So we need to attach a callback to it
+export const putStr = (s: string) =>
+  makeIO(async () => writeStdOut(s).then(() => u));
 
 export const getLine = () => reader.question("");
 export const getStr = (x: U) => makeIO(() => getLine());
@@ -47,7 +61,7 @@ export const pure = <T>(x: T) => makeIO(() => x);
 export const ask = (i: number) => {
   return putStr("Is it less than: ")
     .bind((x: U) => putStr(i.toString()))
-    .bind((x: U) => putStr(" (y/n)?"))
+    .bind((x: U) => putStr("? (y/n)\n"))
     .bind(getStr)
     .bind((s: string) => pure(s === "y"));
 };

@@ -21,8 +21,10 @@ export type Thunk<T> = () => MaybePromise<T>;
 
 export const unitThunk = async () => u;
 
-enum MIOErrors {
-  none = "",
+enum MIOStatus {
+  pending = "pending",
+  resolved = "resolved",
+  rejected = "rejected",
   exception = "exception",
   catch = "catch",
   undefined = "undefined",
@@ -31,12 +33,12 @@ enum MIOErrors {
   runCatch = "run catch",
 }
 
-export type TErrorHandler<F> = (lineErr: Error) => (mioerr: MIOErrors) => F;
+export type TErrorHandler<F> = (lineErr: Error) => (mioerr: MIOStatus) => F;
 
 export const errorHandler =
   <F>(fail: F) =>
   (lineErr: Error) =>
-  (mioerr: MIOErrors) =>
+  (mioerr: MIOStatus) =>
     fail;
 
 export const unitErrorHandler = errorHandler(u);
@@ -46,25 +48,71 @@ export type TunitThunk = () => U;
 export const transferIO = async <A, F>(
   a: Thunk<A>,
   fail: TErrorHandler<F>,
-  msg: MIOErrors
-) => new IO_aux<A, F>(a, fail, msg);
+  msg: MIOStatus
+) => new IO_aux(a, fail, msg);
 
-export const noMIOErrors = () => MIOErrors.none;
+export const initMIOStatus = () => MIOStatus.pending;
 
 export const IO = <A>(a: Thunk<A>) =>
-  transferIO(a, unitErrorHandler, noMIOErrors());
+  transferIO(a, unitErrorHandler, initMIOStatus());
 
-export class IO_aux<T, F> {
-  act: Thunk<T>;
-  onFail: TErrorHandler<F>;
-  msg: MIOErrors;
+export const Deferred = <T>() => undefined as unknown as T;
 
-  readonly isGood = () => this.msg === noMIOErrors();
+export type Thunk_<T> = () => T;
 
-  constructor(action: Thunk<T>, fail: TErrorHandler<F>, msg: MIOErrors) {
+export const makeIO = <T>(f: Thunk_<T>) => new IO_<T>(f);
+
+export class IO_<T> {
+  private act: () => T;
+
+  constructor(action: Thunk_<T>) {
     this.act = action;
-    this.onFail = fail;
-    this.msg = msg;
+  }
+
+  readonly run = () => this.act();
+
+  readonly bind = <M>(f: (maps: T) => IO_<M>) =>
+    makeIO(() => f(this.act()).run());
+
+  readonly fmap = <R>(f: (maps: T) => R) =>
+    makeIO(() => {
+      return f(this.act());
+    });
+}
+
+export class IO_aux<T> {
+  private status: MIOStatus;
+  private value: T = Deferred<T>();
+  private error: Error = Deferred<Error>();
+
+  readonly isGood = () => this.status === initMIOStatus();
+
+  constructor(
+    action: (resolveCallback: Function, rejectCallback: Function) => void
+  ) {
+    this.status = MIOStatus.pending;
+    action(this.resolve.bind(this), this.reject.bind(this));
+  }
+
+  private resolve(arg: T) {
+    this.status = MIOStatus.resolved;
+    this.value = arg;
+    for (const thenCallback of this.thenCallbacks) {
+      this.value = thenCallback(this.value);
+    }
+  }
+
+  private reject(arg: T) {
+    this.status = MIOStatus.rejected;
+    this.value = arg;
+    this.error = new Error();
+
+    if (typeof this.catchCallback !== "undefined") {
+      this.catchCallback(this.error);
+    }
+    if (typeof this.finallyCallback !== "undefined") {
+      this.finallyCallback(this.value);
+    }
   }
 
   readonly run = async () => {
@@ -72,10 +120,10 @@ export class IO_aux<T, F> {
       try {
         return await this.act();
       } catch {
-        return this.onFail(new Error())(MIOErrors.run);
+        return this.onFail(new Error())(MIOStatus.run);
       }
     else {
-      return this.onFail(new Error())(MIOErrors.runCatch);
+      return this.onFail(new Error())(MIOStatus.runCatch);
     }
   };
 
@@ -86,7 +134,7 @@ export class IO_aux<T, F> {
         return await f(result).run();
       },
       this.onFail,
-      this.msg
+      this.status
     );
   };
   readonly fmap = async <R>(f: (maps: T) => MaybePromise<R>) =>
@@ -96,7 +144,7 @@ export class IO_aux<T, F> {
         return await f(result);
       },
       this.onFail,
-      this.msg
+      this.status
     );
 }
 
