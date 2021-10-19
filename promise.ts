@@ -1,6 +1,6 @@
 //https://medium.com/@nsready/implementing-promise-in-typescript-2a8a017d821c
 
-import { resolve } from "path";
+//import { resolve } from "path";
 
 interface Thenable {
   then(callback: Function): Thenable;

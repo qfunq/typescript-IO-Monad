@@ -3,6 +3,7 @@ import { u, U, cr } from "./unit";
 import { getStr, putStr, pure, guess } from "./IOMonad";
 import { MyPromise } from "./promise";
 import { Maybe } from "./maybe";
+import { LightPromise } from "./callback";
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
@@ -52,3 +53,10 @@ Maybe.just(10)
     return s;
   })
   .finally("default");
+
+new LightPromise((resolve) => {
+  setTimeout(() => resolve("Hello"), 10000);
+});
+new LightPromise((resolve) => {
+  setTimeout(() => resolve("there"), 10000);
+});
