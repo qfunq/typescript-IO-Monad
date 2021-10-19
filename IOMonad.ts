@@ -1,5 +1,5 @@
 import reader from "readline-sync";
-import { u, U } from "./unit";
+import { u, U, cr } from "./unit";
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
@@ -46,13 +46,14 @@ function putStrRaw(msg: string) {
   return u;
 }
 
+export const funit = () => u;
+
 export const writeStdOut = (s: string) =>
   new Promise((resolved) => process.stdout.write(s, resolved));
 
 //This is a good model, its a raw socket write,
 //So we need to attach a callback to it
-export const putStr = (s: string) =>
-  makeIO(async () => writeStdOut(s).then(() => u));
+export const putStr = (s: string) => makeIO(() => writeStdOut(s).then(funit));
 
 export const getLine = () => reader.question("");
 export const getStr = (x: U) => makeIO(() => getLine());
@@ -61,7 +62,7 @@ export const pure = <T>(x: T) => makeIO(() => x);
 export const ask = (i: number) => {
   return putStr("Is it less than: ")
     .bind((x: U) => putStr(i.toString()))
-    .bind((x: U) => putStr("? (y/n)\n"))
+    .bind((x: U) => putStr("? (y/n)" + cr))
     .bind(getStr)
     .bind((s: string) => pure(s === "y"));
 };

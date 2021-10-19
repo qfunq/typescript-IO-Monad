@@ -1,11 +1,8 @@
 #!./node_modules/.bin/ts-node
-import { u, U } from "./unit";
+import { u, U, cr } from "./unit";
 import { getStr, putStr, pure, guess } from "./IOMonad";
 import { MyPromise } from "./promise";
-
-export type BadData = undefined | null;
-
-export type Possibly<T> = T | BadData;
+import { Maybe } from "./maybe";
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
@@ -23,8 +20,6 @@ test.run();
 
 test.run();
 
-export const cr = "\n";
-
 export const test2 = putStr("What is your name? ")
   .bind(getStr)
   .fmap((s: string) => s.toUpperCase())
@@ -41,10 +36,19 @@ const high = 1024;
 putStr(
   "Think of a number between " + low.toString() + " and " + high.toString() + cr
 )
-  .bind((x: U) => guess(low, high))
-  .bind((ans: number) => putStr(cr + "The answer is: " + ans.toString() + cr))
+  .bind((x) => guess(low, high))
+  .bind((ans) => putStr(cr + "The answer is: " + ans.toString() + cr))
   .run();
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+Maybe.just(10)
+  .fmap((x) => x + 1)
+  .fmap((x) => x.toString())
+  .fmap((s) => {
+    console.log(s);
+    return s;
+  })
+  .finally("default");
