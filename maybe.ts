@@ -2,6 +2,8 @@ export type BadData = undefined | null;
 
 export type Possibly<T> = T | BadData;
 
+//no fbind method ... needs run ... see mio.ts
+
 export class Maybe<T> {
   private constructor(private value: Possibly<T>) {}
 

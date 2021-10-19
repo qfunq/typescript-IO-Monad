@@ -14,16 +14,16 @@ import { Maybe } from "./maybe";
 // C++ has big issues with it, and typescript suffers too.
 // There are workarounds, based on coroutines, which can allocate memory more efficiently.
 
-export const test = putStr("hello").bind((x: U) => putStr(" world!\n"));
+export const test = putStr("hello").fbind((x) => putStr(" world!\n"));
 
 test.run();
 
 test.run();
 
 export const test2 = putStr("What is your name? ")
-  .bind(getStr)
+  .fbind(getStr)
   .fmap((s: string) => s.toUpperCase())
-  .bind((name: string) => putStr(cr + "Hi " + name + cr));
+  .fbind((name: string) => putStr(cr + "Hi " + name + cr));
 
 test2.run();
 
@@ -36,8 +36,8 @@ const high = 1024;
 putStr(
   "Think of a number between " + low.toString() + " and " + high.toString() + cr
 )
-  .bind((x) => guess(low, high))
-  .bind((ans) => putStr(cr + "The answer is: " + ans.toString() + cr))
+  .fbind((x) => guess(low, high))
+  .fbind((ans) => putStr(cr + "The answer is: " + ans.toString() + cr))
   .run();
 
 export function delay(ms: number) {
