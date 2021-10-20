@@ -68,10 +68,4 @@ Maybe.just(10)
 //Promises fire off their resolution as soon as they are created.
 //For IO composition, we need to defer this.
 
-const testit = async () => {
-  await test3.run();
-
-  log().info("Result: ");
-};
-
-testit();
+test3.ret_with_default(u).then((res) => log().info("Here is: ").info(res));

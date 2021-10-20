@@ -47,11 +47,26 @@ export type TunitThunk = () => U;
 
 export const initMIOStatus = () => MIOStatus.pending;
 
+export type BadData = undefined | null;
+
+export type Possibly<T> = T | BadData;
+
 export const Deferred = <T>() => undefined as unknown as T;
 
 export type IOPthunk<T> = () => Promise<T>;
 
 export const makeIO = <T>(f: IOPthunk<T>): IOP<T> => new IOP<T>(f);
+
+const isBad = <T>(value: Possibly<T>) => value === null || value === undefined;
+
+const bad = <T>() => null as unknown as T;
+
+const mapBad = <T>(val: T) => (isBad(val) ? bad<T>() : val);
+
+const with_default =
+  <T>(def: T) =>
+  (val: T) =>
+    isBad(val) ? def! : val;
 
 export class IOP<T> {
   private act: () => Promise<T>;
@@ -65,17 +80,33 @@ export class IOP<T> {
   static rootf = <T>(thunk: () => T) =>
     makeIO<T>(() => Promise.resolve(thunk()));
 
-  readonly run = async () => this.act().then((x) => x);
+  readonly run = async () => this.act();
 
-  readonly fbind = <M>(f: (maps: T) => IOP<M>) =>
-    makeIO(() => this.act().then((x) => f(x).run()));
+  readonly fbind = <M>(iop: (maps: T) => IOP<M>) =>
+    makeIO(() =>
+      this.act()
+        .then((x) => iop(mapBad(x)).run())
+        .catch((x) => iop(bad<T>()).run())
+    );
 
   readonly then = <R>(f: (maps: T) => R) =>
     makeIO(() => {
-      return this.act().then((x) => f(x));
+      return this.act()
+        .then((x) => (isBad(x) ? mapBad(x) : mapBad(f(x))))
+        .catch((x) => bad<R>());
     });
 
   readonly fmap = this.then;
+
+  readonly ret_with_default = async (def: T) => {
+    const v = await this.run();
+    return with_default(def)(v);
+  };
+
+  readonly swap_with_default = (def: T) => async (cont: Function) => {
+    const v = await this.run();
+    return cont(with_default(def)(v));
+  };
 }
 
 export function delay(ms: number) {
