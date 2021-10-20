@@ -85,3 +85,48 @@ Maybe.just(10)
 //For IO composition, we need to defer this.
 
 test3.ret_with_default(u).then((res) => log().info("Here is: ").info(res));
+
+//https://stackoverflow.com/questions/12710905/how-do-i-dynamically-assign-properties-to-an-object-in-typescript
+
+interface IExisting {
+  userName: string;
+}
+
+interface INewStuff {
+  email: string;
+}
+
+const existingObject: IExisting = {
+  userName: "jsmith",
+};
+
+const objectWithAllProps: IExisting & INewStuff = Object.assign(
+  {},
+  existingObject,
+  {
+    email: "jsmith@someplace.com",
+  }
+);
+
+console.log(objectWithAllProps.userName + objectWithAllProps.email); // jsmith@someplace.com
+
+//A controlled usage of any increases typescripts deductive powers. Why? addProp should just work without this kind of hackery.
+
+declare type EnvironmentData = any;
+
+const addPropValueAux =
+  <O, N>(oldData: O) =>
+  (newData: N): O & N =>
+    Object.assign({}, oldData, newData);
+const addPropValue = (oldData: EnvironmentData) => (newData: EnvironmentData) =>
+  addPropValueAux<typeof oldData, typeof newData>(oldData)(newData);
+
+const exist2 = {
+  userName: "John Smith",
+};
+
+const ext = addPropValue(exist2)({
+  email: "jsmith@anotherplace.com",
+});
+
+console.log(ext.userName + " " + ext.email);
