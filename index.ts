@@ -1,7 +1,7 @@
 #!./node_modules/.bin/ts-node
 import { u, U, cr } from "./unit";
 //import { getStr, putStr, pure, guess } from "./IOMonad";
-import { getStr, putStr, pure, guess } from "./maybeIO";
+import { getStr, putStr, pure, guess, IOP } from "./maybeIO";
 import { MyPromise } from "./promise";
 import { Maybe } from "./maybe";
 import { LightPromise, LightPromise2 } from "./callback";
@@ -17,31 +17,40 @@ import { log } from "./logging";
 // C++ has big issues with it, and typescript suffers too.
 // There are workarounds, based on coroutines, which can allocate memory more efficiently.
 
-export const test = putStr("hello").fbind((x) => putStr(" world!\n"));
+const prompt =
+  <V>(str: string) =>
+  (x: V) =>
+    putStr(str);
+export const test = IOP.root(u)
+  .fbind(prompt("hello"))
+  .fbind(prompt(" world!\n"));
 
-test.run();
-
-test.run();
-
-export const test2 = putStr("What is your name? ")
-  .fbind(getStr)
-  .fmap((s: string) => s.toUpperCase())
-  .fbind((name: string) => putStr(cr + "Hi " + name + cr));
-
-test2.run();
+//test2.run();
 
 const low = 1;
 const high = 1024;
 
+export const test2 = test
+
+  .fbind(prompt("What is your name?\n"))
+  .fbind(getStr)
+  .fmap((s: string) => s.toUpperCase())
+  .fbind((name: string) => putStr(cr + "Hi " + name + cr));
+
 // Works out the box in typescript! That's an improvement over C++ that has problems
 // when the thunk is strongly typed, requiring the std::function hack described by Bartosz.
-
-putStr(
-  "Think of a number between " + low.toString() + " and " + high.toString() + cr
-)
+const test3 = test2
+  .fbind(
+    prompt(
+      "Think of a number between " +
+        low.toString() +
+        " and " +
+        high.toString() +
+        cr
+    )
+  )
   .fbind((x) => guess(low, high))
-  .fbind((ans) => putStr(cr + "The answer is: " + ans.toString() + cr))
-  .run();
+  .fbind((ans) => putStr(cr + "The answer is: " + ans.toString() + cr));
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,20 +68,10 @@ Maybe.just(10)
 //Promises fire off their resolution as soon as they are created.
 //For IO composition, we need to defer this.
 
-const testa = async () => {
-  const res1 = new LightPromise2((resolve) =>
-    setTimeout(() => resolve("Hello"), 10000)
-  );
-
-  //const res2 = new Promise(resolve => setTimeout(() => resolve("Hello"), 10000)).then(s => s);
-
-  return res1;
-};
-
 const testit = async () => {
-  const res = await testa();
+  await test3.run();
 
-  log().info("Result: " + res);
+  log().info("Result: ");
 };
 
 testit();

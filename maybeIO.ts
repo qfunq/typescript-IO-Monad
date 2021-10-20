@@ -82,7 +82,7 @@ export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 export const writeStdOut = async (s: string) =>
-  new Promise((resolved) => process.stdout.write(s, resolved)).then((x) => u);
+  new Promise<U>((resolved) => process.stdout.write(s, (z) => resolved(u)));
 
 //This is a good model, its a raw socket write,
 //So we need to attach a callback to it
