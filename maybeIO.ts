@@ -3,6 +3,23 @@ import { u, U, cr } from "./unit";
 
 import { log, xlog } from "./logging";
 
+export type BadData = undefined | null;
+
+export type Possibly<T> = T | BadData;
+
+const isBad = <T>(value: Possibly<T>) => value === null || value === undefined;
+
+const bad = <T>() => null as unknown as T;
+
+const mapBad = <T>(val: T) => (isBad(val) ? bad<T>() : val);
+
+export type IOthunk<T> = () => Promise<T>;
+
+const with_default =
+  <T>(def: T) =>
+  (val: T) =>
+    isBad(val) ? def! : val;
+
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
 // The next line is a problem, because it uses the heap. The compiler needs to do a lot more work
@@ -15,78 +32,32 @@ import { log, xlog } from "./logging";
 // It's not clear these will code that cleanly in typescipt, but the basic monadic code is simpler
 // in typescript, bar it requires async handling.
 
-export type MaybePromise<T> = T | Promise<T>;
+export const makeIO = <T>(f: IOthunk<T>): IO<T> => new IO<T>(f);
 
-export type Thunk<T> = () => MaybePromise<T>;
+// A combination of IO/Maybe/Promises, all linked together in a way that largely works as expected.
+// If used non-recursively, it forces the CCC, quite rigorously. Trying to run the code unbound
+// to the other scripts is an amusingly visual lesson in async code.
+// String IO needs additonal forwarding parms to allow persistance of environment.
 
-export const unitThunk = async () => u;
-
-enum MIOStatus {
-  pending = "pending",
-  resolved = "resolved",
-  rejected = "rejected",
-  exception = "exception",
-  catch = "catch",
-  undefined = "undefined",
-  null = "null",
-  run = "run",
-  runCatch = "run catch",
-}
-
-export type TErrorHandler<F> = (lineErr: Error) => (mioerr: MIOStatus) => F;
-
-export const errorHandler =
-  <F>(fail: F) =>
-  (lineErr: Error) =>
-  (mioerr: MIOStatus) =>
-    fail;
-
-export const unitErrorHandler = errorHandler(u);
-
-export type TunitThunk = () => U;
-
-export const initMIOStatus = () => MIOStatus.pending;
-
-export type BadData = undefined | null;
-
-export type Possibly<T> = T | BadData;
-
-export const Deferred = <T>() => undefined as unknown as T;
-
-export type IOPthunk<T> = () => Promise<T>;
-
-export const makeIO = <T>(f: IOPthunk<T>): IOP<T> => new IOP<T>(f);
-
-const isBad = <T>(value: Possibly<T>) => value === null || value === undefined;
-
-const bad = <T>() => null as unknown as T;
-
-const mapBad = <T>(val: T) => (isBad(val) ? bad<T>() : val);
-
-const with_default =
-  <T>(def: T) =>
-  (val: T) =>
-    isBad(val) ? def! : val;
-
-export class IOP<T> {
+export class IO<T> {
   private act: () => Promise<T>;
 
-  constructor(action: IOPthunk<T>) {
+  constructor(action: IOthunk<T>) {
     this.act = action;
   }
 
   //Embed values and functions
   static root = <T>(val: T) => makeIO<T>(() => Promise.resolve(val));
-  static rootf = <T>(thunk: () => T) =>
+  static rootfun = <T>(thunk: () => T) =>
     makeIO<T>(() => Promise.resolve(thunk()));
 
-  readonly run = async () => this.act();
+  private readonly run = async () => this.act();
 
-  readonly fbind = <M>(iop: (maps: T) => IOP<M>) =>
+  readonly fbind = <M>(io: (maps: T) => IO<M>) =>
     makeIO(() =>
       this.act()
-        .then((x) => iop(mapBad(x)).run())
-        .catch((x) => iop(bad<T>()).run())
+        .then((x) => io(mapBad(x)).run())
+        .catch((x) => io(bad<T>()).run())
     );
 
   readonly then = <R>(f: (maps: T) => R) =>
@@ -115,30 +86,21 @@ export function delay(ms: number) {
 export const writeStdOut = async (s: string) =>
   new Promise<U>((resolved) => process.stdout.write(s, (z) => resolved(u)));
 
+export const writeStdOutForward =
+  <T>(val: T) =>
+  async (s: string) =>
+    new Promise<T>((resolved) => process.stdout.write(s, (z) => resolved(val)));
+
+export const putStrGen =
+  async <T>(val: T) =>
+  async (s: string) =>
+    makeIO(() => writeStdOutForward(val)(s));
 //This is a good model, its a raw socket write,
 //So we need to attach a callback to it
 export const putStr = (s: string) => makeIO(() => writeStdOut(s));
 
 export const getLine = () => reader.question("");
 
-export const getStr = (x: U) => IOP.rootf(getLine);
+export const getStr = (x: U) => IO.rootfun(getLine);
 
-export const pure = <T>(x: T) => IOP.root(x);
-
-export const ask = (i: number) => {
-  return putStr("Is it less than: ")
-    .fbind((x: U) => putStr(i.toString()))
-    .fbind((x: U) => putStr("? (y/n)" + cr))
-    .fbind(getStr)
-    .fbind((s: string) => pure(s === "y"));
-};
-
-export const guess = (a: number, b: number): IOP<number> => {
-  if (a >= b) return pure(a);
-
-  const m = (b + 1 + a) / 2;
-
-  return ask(m).fbind((yes: boolean) => {
-    return yes ? guess(a, m - 1) : guess(m, b);
-  });
-};
+export const pure = <T>(x: T) => IO.root(x);

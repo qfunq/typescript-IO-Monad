@@ -1,10 +1,8 @@
 #!./node_modules/.bin/ts-node
 import { u, U, cr } from "./unit";
 //import { getStr, putStr, pure, guess } from "./IOMonad";
-import { getStr, putStr, pure, guess, IOP } from "./maybeIO";
-import { MyPromise } from "./promise";
+import { getStr, putStr, pure, IO } from "./maybeIO";
 import { Maybe } from "./maybe";
-import { LightPromise, LightPromise2 } from "./callback";
 import { log } from "./logging";
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
@@ -21,7 +19,7 @@ const prompt =
   <V>(str: string) =>
   (x: V) =>
     putStr(str);
-export const test = IOP.root(u)
+export const test = IO.root(u)
   .fbind(prompt("hello"))
   .fbind(prompt(" world!\n"));
 
@@ -34,11 +32,29 @@ export const test2 = test
 
   .fbind(prompt("What is your name?\n"))
   .fbind(getStr)
-  .fmap((s: string) => s.toUpperCase())
-  .fbind((name: string) => putStr(cr + "Hi " + name + cr));
+  .then((s) => s.toUpperCase())
+  .fbind((name) => putStr(cr + "Hi " + name + cr));
 
 // Works out the box in typescript! That's an improvement over C++ that has problems
 // when the thunk is strongly typed, requiring the std::function hack described by Bartosz.
+export const ask = (i: number) => {
+  return putStr("Is it less than: ")
+    .fbind((x) => putStr(i.toString()))
+    .fbind((x) => putStr("? (y/n)" + cr))
+    .fbind(getStr)
+    .fbind((s) => pure(s === "y"));
+};
+
+export const guess = (a: number, b: number): IO<number> => {
+  if (a >= b) return pure(a);
+
+  const m = (b + 1 + a) / 2;
+
+  return ask(m).fbind((yes: boolean) => {
+    return yes ? guess(a, m - 1) : guess(m, b);
+  });
+};
+
 const test3 = test2
   .fbind(
     prompt(
