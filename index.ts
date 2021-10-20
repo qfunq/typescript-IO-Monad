@@ -86,30 +86,6 @@ Maybe.just(10)
 
 test3.ret_with_default(u).then((res) => log().info("Here is: ").info(res));
 
-//https://stackoverflow.com/questions/12710905/how-do-i-dynamically-assign-properties-to-an-object-in-typescript
-
-interface IExisting {
-  userName: string;
-}
-
-interface INewStuff {
-  email: string;
-}
-
-const existingObject: IExisting = {
-  userName: "jsmith",
-};
-
-const objectWithAllProps: IExisting & INewStuff = Object.assign(
-  {},
-  existingObject,
-  {
-    email: "jsmith@someplace.com",
-  }
-);
-
-console.log(objectWithAllProps.userName + objectWithAllProps.email); // jsmith@someplace.com
-
 //A controlled usage of any increases typescripts deductive powers. Why? addProp should just work without this kind of hackery.
 
 declare type EnvironmentData = any;
