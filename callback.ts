@@ -1,4 +1,4 @@
-import { log, xlog } from "./logging";
+import { log, xlog, fix } from "./logging";
 
 export const Deferred = <T>() => undefined as unknown as T;
 
@@ -14,23 +14,57 @@ export class LightPromise<T> {
 
   constructor(
     action: (
-      resolveCallback: (maps: T) => void,
-      rejectCallback: (maps: Error) => void
+      resolveCallback: (maps: T) => T,
+      rejectCallback: (maps: Error) => Error
     ) => void
   ) {
     this.status = "pending";
     action(this.resolve.bind(this), this.reject.bind(this));
   }
 
-  private resolve(arg: T) {
+  private resolve(arg: T): T {
     this.status = "resolved";
     this.value = arg; //We dont want to do anything with the callback except apply in to the then callback
     log().info("resolve: ").info(arg);
+
+    return arg;
   }
 
-  private reject(arg: Error) {
+  private reject(arg: Error): Error {
     this.status = "rejected";
     this.error = arg;
     log().info("rejected ");
+    return arg;
+  }
+}
+export class LightPromise2<T> {
+  private status: string;
+  private value: T = Deferred<T>();
+  private error: Error = Deferred<Error>();
+
+  constructor(
+    action: (
+      resolveCallback: (maps: T) => T,
+      rejectCallback: (maps: Error) => Error
+    ) => void
+  ) {
+    this.status = "init";
+
+    action(this.resolve.bind(this), this.reject.bind(this));
+  }
+
+  private resolve(arg: T): T {
+    this.status = "resolved";
+    this.value = arg; //We dont want to do anything with the callback except apply in to the then callback
+    log().info("resolve: ").info(arg);
+
+    return arg;
+  }
+
+  private reject(arg: Error): Error {
+    this.status = "rejected";
+    this.error = arg;
+    log().info("rejected ");
+    return arg;
   }
 }

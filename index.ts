@@ -1,9 +1,11 @@
 #!./node_modules/.bin/ts-node
 import { u, U, cr } from "./unit";
-import { getStr, putStr, pure, guess } from "./IOMonad";
+//import { getStr, putStr, pure, guess } from "./IOMonad";
+import { getStr, putStr, pure, guess } from "./maybeIO";
 import { MyPromise } from "./promise";
 import { Maybe } from "./maybe";
-import { LightPromise } from "./callback";
+import { LightPromise, LightPromise2 } from "./callback";
+import { log } from "./logging";
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
@@ -54,9 +56,23 @@ Maybe.just(10)
   })
   .finally("default");
 
-new LightPromise((resolve) => {
-  setTimeout(() => resolve("Hello"), 10000);
-});
-new LightPromise((resolve) => {
-  setTimeout(() => resolve("there"), 10000);
-});
+//Promises fire off their resolution as soon as they are created.
+//For IO composition, we need to defer this.
+
+const testa = async () => {
+  const res1 = new LightPromise2((resolve) =>
+    setTimeout(() => resolve("Hello"), 10000)
+  );
+
+  //const res2 = new Promise(resolve => setTimeout(() => resolve("Hello"), 10000)).then(s => s);
+
+  return res1;
+};
+
+const testit = async () => {
+  const res = await testa();
+
+  log().info("Result: " + res);
+};
+
+testit();

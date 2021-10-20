@@ -1,5 +1,5 @@
 import reader from "readline-sync";
-import { u, U } from "./unit";
+import { u, U, cr } from "./unit";
 
 import { log, xlog } from "./logging";
 
@@ -45,135 +45,69 @@ export const unitErrorHandler = errorHandler(u);
 
 export type TunitThunk = () => U;
 
-export const transferIO = async <A, F>(
-  a: Thunk<A>,
-  fail: TErrorHandler<F>,
-  msg: MIOStatus
-) => new IO_aux(a, fail, msg);
-
 export const initMIOStatus = () => MIOStatus.pending;
-
-export const IO = <A>(a: Thunk<A>) =>
-  transferIO(a, unitErrorHandler, initMIOStatus());
 
 export const Deferred = <T>() => undefined as unknown as T;
 
-export type Thunk_<T> = () => T;
+export type IOPthunk<T> = () => Promise<T>;
 
-export const makeIO = <T>(f: Thunk_<T>) => new IO_<T>(f);
+export const makeIO = <T>(f: IOPthunk<T>): IOP<T> => new IOP<T>(f);
 
-export class IO_<T> {
-  private act: () => T;
+export class IOP<T> {
+  private act: () => Promise<T>;
 
-  constructor(action: Thunk_<T>) {
+  constructor(action: IOPthunk<T>) {
     this.act = action;
   }
 
-  readonly run = () => this.act();
+  //Embed values and functions
+  static root = <T>(val: T) => makeIO<T>(() => Promise.resolve(val));
+  static rootf = <T>(thunk: () => T) =>
+    makeIO<T>(() => Promise.resolve(thunk()));
 
-  readonly bind = <M>(f: (maps: T) => IO_<M>) =>
-    makeIO(() => f(this.act()).run());
+  readonly run = async () => this.act().then((x) => x);
 
-  readonly fmap = <R>(f: (maps: T) => R) =>
+  readonly fbind = <M>(f: (maps: T) => IOP<M>) =>
+    makeIO(() => this.act().then((x) => f(x).run()));
+
+  readonly then = <R>(f: (maps: T) => R) =>
     makeIO(() => {
-      return f(this.act());
+      return this.act().then((x) => f(x));
     });
-}
 
-export class IO_aux<T> {
-  private status: MIOStatus;
-  private value: T = Deferred<T>();
-  private error: Error = Deferred<Error>();
-
-  readonly isGood = () => this.status === initMIOStatus();
-
-  constructor(
-    action: (resolveCallback: Function, rejectCallback: Function) => void
-  ) {
-    this.status = MIOStatus.pending;
-    action(this.resolve.bind(this), this.reject.bind(this));
-  }
-
-  private resolve(arg: T) {
-    this.status = MIOStatus.resolved;
-    this.value = arg;
-    for (const thenCallback of this.thenCallbacks) {
-      this.value = thenCallback(this.value);
-    }
-  }
-
-  private reject(arg: T) {
-    this.status = MIOStatus.rejected;
-    this.value = arg;
-    this.error = new Error();
-
-    if (typeof this.catchCallback !== "undefined") {
-      this.catchCallback(this.error);
-    }
-    if (typeof this.finallyCallback !== "undefined") {
-      this.finallyCallback(this.value);
-    }
-  }
-
-  readonly run = async () => {
-    if (this.isGood())
-      try {
-        return await this.act();
-      } catch {
-        return this.onFail(new Error())(MIOStatus.run);
-      }
-    else {
-      return this.onFail(new Error())(MIOStatus.runCatch);
-    }
-  };
-
-  readonly bind = async <M>(f: (maps: T) => IO_aux<M, F>) => {
-    transferIO(
-      async () => {
-        const result = await this.act();
-        return await f(result).run();
-      },
-      this.onFail,
-      this.status
-    );
-  };
-  readonly fmap = async <R>(f: (maps: T) => MaybePromise<R>) =>
-    transferIO(
-      async () => {
-        const result = await this.act();
-        return await f(result);
-      },
-      this.onFail,
-      this.status
-    );
+  readonly fmap = this.then;
 }
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+export const writeStdOut = async (s: string) =>
+  new Promise((resolved) => process.stdout.write(s, resolved)).then((x) => u);
 
-export const putStr = (s: string) =>
-  IO(() => {
-    console.log(s);
-    return u;
+//This is a good model, its a raw socket write,
+//So we need to attach a callback to it
+export const putStr = (s: string) => makeIO(() => writeStdOut(s));
+
+export const getLine = () => reader.question("");
+
+export const getStr = (x: U) => IOP.rootf(getLine);
+
+export const pure = <T>(x: T) => IOP.root(x);
+
+export const ask = (i: number) => {
+  return putStr("Is it less than: ")
+    .fbind((x: U) => putStr(i.toString()))
+    .fbind((x: U) => putStr("? (y/n)" + cr))
+    .fbind(getStr)
+    .fbind((s: string) => pure(s === "y"));
+};
+
+export const guess = (a: number, b: number): IOP<number> => {
+  if (a >= b) return pure(a);
+
+  const m = (b + 1 + a) / 2;
+
+  return ask(m).fbind((yes: boolean) => {
+    return yes ? guess(a, m - 1) : guess(m, b);
   });
-
-async function readLine(): Promise<string> {
-  const readLine = require("readline").createInterface({
-    input: process.stdin,
-    //output: process.stdout
-  });
-
-  let answer = "";
-  readLine.question("", (it: string) => {
-    answer = it;
-    readLine.close();
-  });
-  while (answer == "") {
-    await delay(100);
-  }
-
-  return answer;
-}
-
-export const getStr = (x: U) => IO(() => readLine());
+};
