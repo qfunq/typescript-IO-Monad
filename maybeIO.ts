@@ -1,5 +1,5 @@
 import reader from "readline-sync";
-import { u, U, cr } from "./unit";
+import { u, U, cr, sideEffect } from "./unit";
 
 import { log, xlog, fix } from "./logging";
 
@@ -24,14 +24,6 @@ export type IOthunk<T> = () => T;
 // in typescript, bar it requires async handling.
 
 export const makeIO = <T>(f: IOthunk<T>): IO<T> => new IO<T>(f);
-
-export const sideEffect =
-  <T, SR, R>(side: (maps: T) => SR) =>
-  (ctn: (maps: T) => R) =>
-  (env: T): R => {
-    side(env);
-    return ctn(env);
-  };
 
 export class IO<T> {
   private act: IOthunk<T>;
@@ -63,6 +55,7 @@ export class IO<T> {
 
   readonly fmap = this.then;
 
+  //give a then callback to implement the async api.
   readonly exec = (def: T) => {
     return { then: <R>(f: (maps: T) => R) => f(with_default(def)(this.run())) };
   };

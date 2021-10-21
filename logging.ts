@@ -151,7 +151,7 @@ export class logclos {
     return logContextInfoGen(this)(simpleLogger)(fix)(stackRenderer)(a);
   }
   info(a: LoggingHardenedAny): this {
-    return logContextInfoGen(this)(simpleLogger)(fix)(fileLineRenderer)(a);
+    return logContextInfoGen(this)(simpleLogger)(fix)(this.renderer())(a);
   }
   reportSecurityIncident(a: LoggingHardenedAny): this {
     return logContextInfo(this)(errorCol)(this.renderer())(a);

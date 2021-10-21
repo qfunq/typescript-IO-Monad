@@ -1,5 +1,5 @@
 import reader from "readline-sync";
-import { u, U, cr } from "./unit";
+import { u, U, cr, sideEffect } from "./unit";
 
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
@@ -48,13 +48,13 @@ function putStrMRaw(msg: string) {
 
 export const funit = () => u;
 
-export const writeStdOut = (s: string) => process.stdout.write(s);
+export const putStr = (s: string) => process.stdout.write(s);
 
 //This is a good model, its a raw socket write,
 //So we need to attach a callback to it
 export const putStrM = (s: string) =>
   makeIO(() => {
-    writeStdOut(s);
+    putStr(s);
     return u;
   });
 
