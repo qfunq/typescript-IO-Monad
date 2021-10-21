@@ -5,12 +5,13 @@ import { log, xlog, fix } from "./logging";
 
 import { isBad, mapBad, with_default } from "./badValues";
 
-export type IOthunk<T> = () => T;
+export type IOthunk<T> = () => Promise<T>;
 
-// A combination of IO/Maybe, all linked together in a way that largely works as expected.
+// A combination of IO/Maybe/Promises, all linked together in a way that largely works as expected.
 // If used non-recursively, it forces the CCC, quite rigorously. Trying to run the code unbound
 // to the other scripts is an amusingly visual lesson in async code.
 // String IO needs additonal forwarding parms to allow persistance of environment.
+
 //https://www.youtube.com/watch?v=vkcxgagQ4bM 21:15 ... you might be asking, what is this U?
 
 // The next line is a problem, because it uses the heap. The compiler needs to do a lot more work
@@ -41,8 +42,9 @@ export class IO<T> {
   }
 
   //Embed values and functions
-  static root = <T>(val: T) => makeIO<T>(() => val);
-  static rootfun = <T>(thunk: () => T) => makeIO<T>(thunk);
+  static root = <T>(val: T) => makeIO<T>(() => Promise.resolve(val));
+  static rootfun = <T>(thunk: () => T) =>
+    makeIO<T>(() => Promise.resolve(thunk()));
 
   private readonly run = () => this.act();
 
@@ -52,24 +54,35 @@ export class IO<T> {
       sideEffect<T, void, R>((x) => log().warning(msg))(f);
 
   readonly fbind = <M>(io: (maps: T) => IO<M>) =>
-    makeIO(() => io(mapBad(this.act())).run());
+    makeIO(
+      () => this.act().then((x) => io(mapBad(x)).run())
+      //.catch(x => this.warn("fbind error")(err => io(bad<T>()).run()))
+    );
 
   readonly then = <R>(f: (maps: T) => R) =>
     makeIO(() => {
-      const x = this.act();
-      return isBad(x) ? mapBad(x) : mapBad(f(x));
+      return this.act().then((x) => (isBad(x) ? mapBad(x) : mapBad(f(x))));
       //.catch(this.warn("fbind error")(x => bad<R>()));
     });
 
   readonly fmap = this.then;
 
-  readonly exec = (def: T) => with_default(def)(this.run());
+  readonly exec = (def: T) => {
+    const v = this.run()
+      .then((x) => with_default(def)(x))
+      .catch((x) => this.warn(x.toString())((z) => def));
+    return v;
+  };
 }
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-export const putStr = (s: string) => process.stdout.write(s);
+export const putStr = (s: string) =>
+  new Promise<U>((resolved) => process.stdout.write(s, (z) => resolved(u)))
+    .then((u) => u)
+    .catch((err) => u)
+    .finally();
 
 //This is a good model, its a raw socket write,
 //So we need to attach a callback to it

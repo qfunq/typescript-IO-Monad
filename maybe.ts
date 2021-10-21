@@ -1,6 +1,4 @@
-export type BadData = undefined | null;
-
-export type Possibly<T> = T | BadData;
+import { Possibly } from "./badValues";
 
 //no fbind method ... needs run ... see mio.ts
 

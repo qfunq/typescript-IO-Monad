@@ -34,7 +34,7 @@ export class IO<T> {
     });
 }
 
-function putStrRaw(msg: string) {
+function putStrMRaw(msg: string) {
   const cout = require("readline").createInterface({
     output: process.stdout,
   });
@@ -48,17 +48,16 @@ function putStrRaw(msg: string) {
 
 export const funit = () => u;
 
-export const writeStdOut = (s: string) =>
-  new Promise((resolved) => process.stdout.write(s, resolved));
+export const writeStdOut = (s: string) => process.stdout.write(s);
 
 //This is a good model, its a raw socket write,
 //So we need to attach a callback to it
-export const putStr = (s: string) =>
+export const putStrM = (s: string) =>
   makeIO(() => {
     writeStdOut(s);
     return u;
   });
 
 export const getLine = () => reader.question("");
-export const getStr = (x: U) => makeIO(() => getLine());
+export const getStrM = (x: U) => makeIO(() => getLine());
 export const pure = <T>(x: T) => makeIO(() => x);

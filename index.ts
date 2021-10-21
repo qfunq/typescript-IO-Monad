@@ -1,7 +1,7 @@
 #!./node_modules/.bin/ts-node
 import { u, U, cr } from "./unit";
-//import { getStr, putStr, pure, guess } from "./IOMonad";
-import { getStr, putStr, pure, IO } from "./maybeIO";
+//import { getStrM, putStrM, pure, guess } from "./IOMonad";
+import { getStrM, putStr, putStrM, pure, IO } from "./maybeIO";
 import { Maybe } from "./maybe";
 import { log } from "./logging";
 
@@ -18,7 +18,7 @@ import { log } from "./logging";
 const prompt =
   <V>(str: string) =>
   (x: V) =>
-    putStr(str);
+    putStrM(str);
 export const test = IO.root(u)
   .fbind(prompt("hello"))
   .fbind(prompt(" world!\n"));
@@ -31,17 +31,17 @@ const high = 1024;
 export const test2 = test
 
   .fbind(prompt("What is your name?\n"))
-  .fbind(getStr)
+  .fbind(getStrM)
   .then((s) => s.toUpperCase())
-  .fbind((name) => putStr(cr + "Hi " + name + cr));
+  .fbind((name) => putStrM(cr + "Hi " + name + cr));
 
 // Works out the box in typescript! That's an improvement over C++ that has problems
 // when the thunk is strongly typed, requiring the std::function hack described by Bartosz.
 export const ask = (i: number) => {
-  return putStr("Is it less than: ")
-    .fbind((x) => putStr(i.toString()))
-    .fbind((x) => putStr("? (y/n)" + cr))
-    .fbind(getStr)
+  return putStrM("Is it less than: ")
+    .fbind((x) => putStrM(i.toString()))
+    .fbind((x) => putStrM("? (y/n)" + cr))
+    .fbind(getStrM)
     .fbind((s) => pure(s === "y"));
 };
 
@@ -66,7 +66,10 @@ const test3 = test2
     )
   )
   .fbind((x) => guess(low, high))
-  .fbind((ans) => putStr(cr + "The answer is: " + ans.toString() + cr));
+  .fmap((ans) => {
+    putStr(cr + "The answer is: " + ans.toString());
+    return ans;
+  });
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -84,7 +87,9 @@ Maybe.just(10)
 //Promises fire off their resolution as soon as they are created.
 //For IO composition, we need to defer this.
 
-test3.ret_with_default(u).then((res) => log().info("Here is: ").info(res));
+const res = test3.exec(-1);
+
+log().info("Answer from monad: ").info(res);
 
 //A controlled usage of any increases typescripts deductive powers. Why? addProp should just work without this kind of hackery.
 
