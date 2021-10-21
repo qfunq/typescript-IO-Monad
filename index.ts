@@ -1,7 +1,7 @@
 #!./node_modules/.bin/ts-node
 import { u, U, cr } from "./unit";
 //import { getStrM, putStrM, pure, guess } from "./IOMonad";
-import { getStrM, putStr, putStrM, pure, IO } from "./maybeIO";
+import { getStrM, putStr, putStrM, pure, IO } from "./maybeIOPromise";
 import { Maybe } from "./maybe";
 import { log } from "./logging";
 
@@ -66,10 +66,7 @@ const test3 = test2
     )
   )
   .fbind((x) => guess(low, high))
-  .fmap((ans) => {
-    putStr(cr + "The answer is: " + ans.toString());
-    return ans;
-  });
+  .fbind((ans) => putStrM(cr + "The answer is: " + ans.toString()));
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -87,9 +84,9 @@ Maybe.just(10)
 //Promises fire off their resolution as soon as they are created.
 //For IO composition, we need to defer this.
 
-const res = test3.exec(-1);
-
-log().info("Answer from monad: ").info(res);
+test3
+  .exec("A non-result")
+  .then((res) => log().info("Answer from monad: ").info(res));
 
 //A controlled usage of any increases typescripts deductive powers. Why? addProp should just work without this kind of hackery.
 

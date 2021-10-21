@@ -68,28 +68,35 @@ export class IO<T> {
   readonly fmap = this.then;
 
   readonly exec = (def: T) => {
-    const v = this.run()
+    return this.run()
       .then((x) => with_default(def)(x))
-      .catch((x) => this.warn(x.toString())((z) => def));
-    return v;
+      .catch((x) => this.warn(x.toString())((z) => def))
+      .finally();
   };
 }
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-export const putStr = (s: string) =>
-  new Promise<U>((resolved) => process.stdout.write(s, (z) => resolved(u)))
-    .then((u) => u)
-    .catch((err) => u)
-    .finally();
+export const putStr =
+  <T>(env: T) =>
+  (s: string) =>
+    new Promise<T>((resolved) => {
+      process.stdout.write(s, (z) => resolved(env));
+      return env;
+    });
 
 //This is a good model, its a raw socket write,
 //So we need to attach a callback to it
-export const putStrM = (s: string) => makeIO(() => putStr(s));
+export const putStrM = (s: string) => makeIO(() => putStr(s)(s));
 
 export const getLine = () => reader.question("");
 
 export const getStrM = (x: U) => IO.rootfun(getLine);
 
 export const pure = <T>(x: T) => IO.root(x);
+
+const prompt =
+  <V>(str: string) =>
+  (x: V) =>
+    putStrM(str);

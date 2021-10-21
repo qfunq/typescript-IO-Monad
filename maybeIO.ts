@@ -63,7 +63,9 @@ export class IO<T> {
 
   readonly fmap = this.then;
 
-  readonly exec = (def: T) => with_default(def)(this.run());
+  readonly exec = (def: T) => {
+    return { then: <R>(f: (maps: T) => R) => f(with_default(def)(this.run())) };
+  };
 }
 
 export function delay(ms: number) {
@@ -73,7 +75,11 @@ export const putStr = (s: string) => process.stdout.write(s);
 
 //This is a good model, its a raw socket write,
 //So we need to attach a callback to it
-export const putStrM = (s: string) => makeIO(() => putStr(s));
+export const putStrM = (s: string) =>
+  makeIO(() => {
+    putStr(s);
+    return s;
+  });
 
 export const getLine = () => reader.question("");
 
